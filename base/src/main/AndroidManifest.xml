@@ -23,6 +23,8 @@
     <!-- TODO: Step 1.0, Review Permissions: Specify permissions you are using. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -43,6 +45,11 @@
             android:name="com.example.android.whileinuselocation.ForegroundOnlyLocationService"
             android:enabled="true"
             android:exported="false" />
+        <service
+            android:name=".DetectedActivitiesIntentService"
+            android:exported="false" />
+
+        <service android:name=".BackgroundDetectedActivitiesService"></service>
     </application>
 
 </manifest>
