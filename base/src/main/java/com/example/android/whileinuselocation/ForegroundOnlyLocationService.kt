@@ -251,6 +251,10 @@ class ForegroundOnlyLocationService : Service() {
         }
     }
 
+    fun setDetectionInterval(waitTime: Int){
+        locationRequest.setInterval((waitTime*1000).toLong())
+    }
+
     /*
      * Generates a BIG_TEXT_STYLE Notification that represent latest location.
      */

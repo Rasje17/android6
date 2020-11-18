@@ -16,31 +16,24 @@
 package com.example.android.whileinuselocation
 
 import android.Manifest
+import android.content.*
 import android.content.pm.PackageManager
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.ServiceConnection
-import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import android.net.Uri
-import android.os.IBinder
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
-
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-
+import com.google.android.gms.location.DetectedActivity
 import com.google.android.material.snackbar.Snackbar
 
 private const val TAG = "MainActivity"
@@ -96,6 +89,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     // Listens for location broadcasts from ForegroundOnlyLocationService.
     private lateinit var foregroundOnlyBroadcastReceiver: ForegroundOnlyBroadcastReceiver
+    private lateinit var broadcastReceiver : BroadcastReceiver
 
     private lateinit var sharedPreferences:SharedPreferences
 
@@ -134,6 +128,19 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         foregroundOnlyBroadcastReceiver = ForegroundOnlyBroadcastReceiver()
 
+        broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Constants.BROADCAST_DETECTED_ACTIVITY) {
+                    val type = intent.getIntExtra("type", -1)
+                    val confidence = intent.getIntExtra("confidence", 0)
+                    handleUserActivity(type, confidence)
+                }
+            }
+        }
+
+
+
+
         sharedPreferences =
             getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
 
@@ -143,7 +150,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         foregroundOnlyLocationButton.setOnClickListener {
             val enabled = sharedPreferences.getBoolean(
-                SharedPreferenceUtil.KEY_FOREGROUND_ENABLED, false)
+                SharedPreferenceUtil.KEY_FOREGROUND_ENABLED, false
+            )
 
             if (enabled) {
                 foregroundOnlyLocationService?.unsubscribeToLocationUpdates()
@@ -177,7 +185,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         LocalBroadcastManager.getInstance(this).registerReceiver(
             foregroundOnlyBroadcastReceiver,
             IntentFilter(
-                ForegroundOnlyLocationService.ACTION_FOREGROUND_ONLY_LOCATION_BROADCAST)
+                ForegroundOnlyLocationService.ACTION_FOREGROUND_ONLY_LOCATION_BROADCAST
+            )
         )
     }
 
@@ -201,11 +210,53 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
         // Updates button states if new while in use location is added to SharedPreferences.
         if (key == SharedPreferenceUtil.KEY_FOREGROUND_ENABLED) {
-            updateButtonState(sharedPreferences.getBoolean(
-                SharedPreferenceUtil.KEY_FOREGROUND_ENABLED, false)
+            updateButtonState(
+                sharedPreferences.getBoolean(
+                    SharedPreferenceUtil.KEY_FOREGROUND_ENABLED, false
+                )
             )
         }
     }
+
+    private fun handleUserActivity(type: Int, confidence: Int) {
+
+        when (type) {
+            DetectedActivity.IN_VEHICLE -> {
+                foregroundOnlyLocationService?.setDetectionInterval(1)
+
+            }
+            DetectedActivity.ON_BICYCLE -> {
+                foregroundOnlyLocationService?.setDetectionInterval(5)
+
+            }
+            DetectedActivity.ON_FOOT -> {
+                foregroundOnlyLocationService?.setDetectionInterval(10)
+
+            }
+            DetectedActivity.RUNNING -> {
+                foregroundOnlyLocationService?.setDetectionInterval(10)
+
+            }
+            DetectedActivity.STILL -> {
+                foregroundOnlyLocationService?.setDetectionInterval(60)
+
+            }
+            DetectedActivity.TILTING -> {
+                foregroundOnlyLocationService?.setDetectionInterval(60)
+
+            }
+            DetectedActivity.WALKING -> {
+                foregroundOnlyLocationService?.setDetectionInterval(20)
+
+            }
+            DetectedActivity.UNKNOWN -> {
+                foregroundOnlyLocationService?.setDetectionInterval(15)
+
+            }
+        }
+
+    }
+
 
     // TODO: Step 1.0, Review Permissions: Method checks if permissions approved.
     private fun foregroundPermissionApproved(): Boolean {
@@ -301,7 +352,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 
-    private fun logResultsToScreen(output:String) {
+    private fun logResultsToScreen(output: String) {
         val outputWithPreviousLogs = "$output\n${outputTextView.text}"
         outputTextView.text = outputWithPreviousLogs
     }
